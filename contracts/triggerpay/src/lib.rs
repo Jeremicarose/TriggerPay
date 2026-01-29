@@ -109,11 +109,11 @@ pub struct Attestation {
 }
 
 // View types (for returning data without internal fields)
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, JsonSchema)]
 #[serde(crate = "near_sdk::serde")]
 pub struct TriggerView {
     pub id: TriggerId,
-    pub owner: AccountId,
+    pub owner: String, // AccountId as string for JsonSchema compatibility
     pub condition: Condition,
     pub payout: Payout,
     pub funded_amount: String, // String for JSON compatibility
