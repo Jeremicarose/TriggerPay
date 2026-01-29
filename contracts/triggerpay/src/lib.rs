@@ -424,7 +424,7 @@ impl TriggerPay {
 
         TriggerView {
             id: trigger.id.clone(),
-            owner: trigger.owner.clone(),
+            owner: trigger.owner.to_string(),
             condition: trigger.condition.clone(),
             payout: trigger.payout.clone(),
             funded_amount: trigger.funded_amount.to_string(),
