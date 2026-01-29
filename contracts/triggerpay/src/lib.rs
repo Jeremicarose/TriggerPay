@@ -2,9 +2,11 @@ use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, Vector};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
-    env, near_bindgen, AccountId, Balance, BorshStorageKey, Gas, NearToken, PanicOnDefault,
+    env, near_bindgen, AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault,
     Promise, PublicKey,
 };
+
+pub type Balance = u128;
 use sha2::{Digest, Sha256};
 
 // ============================================================================
@@ -167,8 +169,8 @@ impl TriggerPay {
     /// Set the agent's public key (only owner can call)
     pub fn set_agent_key(&mut self, public_key: PublicKey) {
         self.assert_owner();
-        self.agent_public_key = Some(public_key);
         env::log_str(&format!("Agent public key set: {:?}", public_key));
+        self.agent_public_key = Some(public_key);
     }
 
     // ========================================================================
@@ -356,7 +358,7 @@ impl TriggerPay {
     pub fn get_user_triggers(&self, account_id: AccountId) -> Vec<TriggerView> {
         self.user_triggers
             .get(&account_id)
-            .map(|ids| {
+            .map(|ids: Vector<TriggerId>| {
                 ids.iter()
                     .filter_map(|id| self.triggers.get(&id))
                     .map(|t| self.trigger_to_view(&t))
@@ -378,7 +380,7 @@ impl TriggerPay {
     pub fn get_attestations(&self, trigger_id: TriggerId) -> Vec<Attestation> {
         self.attestations
             .get(&trigger_id)
-            .map(|v| v.iter().collect())
+            .map(|v: Vector<Attestation>| v.iter().collect())
             .unwrap_or_default()
     }
 
@@ -413,7 +415,7 @@ impl TriggerPay {
         let attestation_count = self
             .attestations
             .get(&trigger.id)
-            .map(|v| v.len() as u32)
+            .map(|v: Vector<Attestation>| v.len() as u32)
             .unwrap_or(0);
 
         TriggerView {
