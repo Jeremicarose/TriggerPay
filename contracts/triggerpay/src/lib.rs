@@ -543,7 +543,7 @@ mod tests {
 
         // Verify trigger was stored
         let trigger = contract.get_trigger(trigger_id.clone()).unwrap();
-        assert_eq!(trigger.owner, user);
+        assert_eq!(trigger.owner, user.to_string());
         assert_eq!(trigger.condition.flight_number, "AA1234");
         assert_eq!(trigger.status, Status::Active);
     }
