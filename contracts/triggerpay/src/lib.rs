@@ -1,10 +1,7 @@
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, Vector};
 use near_sdk::serde::{Deserialize, Serialize};
-use near_sdk::{
-    env, near_bindgen, AccountId, BorshStorageKey, Gas, NearToken, PanicOnDefault,
-    Promise, PublicKey,
-};
+use near_sdk::{env, AccountId, BorshStorageKey, Gas, NearToken, Promise, PublicKey};
 
 pub type Balance = u128;
 use sha2::{Digest, Sha256};
@@ -130,9 +127,7 @@ pub struct TriggerView {
 // Contract
 // ============================================================================
 
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-#[borsh(crate = "near_sdk::borsh")]
+#[near_sdk::near(contract_state)]
 pub struct TriggerPay {
     // All triggers by ID
     triggers: UnorderedMap<TriggerId, Trigger>,
@@ -148,7 +143,14 @@ pub struct TriggerPay {
     trigger_counter: u64,
 }
 
-#[near_bindgen]
+// Implement Default to panic - we require explicit initialization via `new()`
+impl Default for TriggerPay {
+    fn default() -> Self {
+        panic!("Contract must be initialized with new(owner)")
+    }
+}
+
+#[near_sdk::near]
 impl TriggerPay {
     #[init]
     pub fn new(owner: AccountId) -> Self {
@@ -309,7 +311,7 @@ impl TriggerPay {
     }
 
     /// Claim refund for an expired or unmet trigger
-    pub fn claim_refund(&mut self, trigger_id: TriggerId) {
+    pub fn claim_refund(&mut self, trigger_id: TriggerId) -> Promise {
         let mut trigger = self.triggers.get(&trigger_id).expect("Trigger not found");
 
         // Verify caller is the owner
@@ -337,12 +339,13 @@ impl TriggerPay {
         // Refund the deposit (minus a small fee for storage)
         let refund_amount = trigger.funded_amount.saturating_sub(EXECUTION_FEE / 10); // Keep 0.2 NEAR for storage
 
-        Promise::new(trigger.owner.clone()).transfer(NearToken::from_yoctonear(refund_amount));
-
         env::log_str(&format!(
             "Refund issued for {}: {} yoctoNEAR to {}",
             trigger_id, refund_amount, trigger.owner
         ));
+
+        // Return the promise so NEAR executes the transfer
+        Promise::new(trigger.owner.clone()).transfer(NearToken::from_yoctonear(refund_amount))
     }
 
     // ========================================================================
