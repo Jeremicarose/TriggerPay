@@ -2,6 +2,7 @@ use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::{LookupMap, UnorderedMap, Vector};
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{env, AccountId, BorshStorageKey, Gas, NearToken, Promise, PublicKey};
+use schemars::JsonSchema;
 
 pub type Balance = u128;
 use sha2::{Digest, Sha256};
