@@ -1,0 +1,36 @@
+# Logs
+logs/
+*.log
+
+# Dependencies
+node_modules/
+target/
+
+# Build outputs
+dist/
+.next/
+out/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Rust
+Cargo.lock
+**/*.rs.bk
+
+# Testing
+coverage/
+.nyc_output/
+
+# Misc
+*.pem
+*.key
