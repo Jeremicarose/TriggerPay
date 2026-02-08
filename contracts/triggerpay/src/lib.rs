@@ -509,7 +509,7 @@ mod tests {
     fn sample_condition() -> Condition {
         Condition {
             condition_type: ConditionType::FlightCancellation,
-            flight_number: "AA1234".to_string(),
+            flight_number: "AA1234".to_sweitring(),
             flight_date: "2026-02-15".to_string(),
         }
     }

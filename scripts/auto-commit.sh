@@ -7,7 +7,7 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LOG_FILE="$REPO_ROOT/logs/auto-commit.log"
-INTERVAL=300  # 5 minutes in seconds
+INTERVAL=60  # 1 minute in seconds
 
 # Ensure log directory exists
 mkdir -p "$REPO_ROOT/logs"
@@ -144,7 +144,7 @@ case "${1:-}" in
         ;;
     --watch|"")
         # Continuous watch mode (default)
-        log "🚀 TriggerPay auto-commit started (checking every 5 minutes)"
+        log "🚀 TriggerPay auto-commit started (checking every 1 minute)"
         log "   Press Ctrl+C to stop"
 
         while true; do
