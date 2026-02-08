@@ -1,26 +1,184 @@
 @import "tailwindcss";
 
+/* Import fonts - Aviation control tower aesthetic */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Aviation Control Tower Palette */
+  --void: #050508;
+  --midnight: #0a0b10;
+  --carbon: #121318;
+  --graphite: #1a1b22;
+  --steel: #252630;
+  --slate: #3a3d4a;
+  --signal-green: #00ff88;
+  --signal-green-dim: rgba(0, 255, 136, 0.2);
+  --radar-cyan: #00d4ff;
+  --radar-cyan-dim: rgba(0, 212, 255, 0.15);
+  --warning-amber: #ffb800;
+  --alert-red: #ff4757;
+  --fog: #8892a8;
+  --cloud: #b8c0d4;
+  --white: #f0f4fc;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--void);
+  color: var(--cloud);
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+}
+
+/* Radar grid background effect */
+.radar-grid {
+  background-image:
+    linear-gradient(var(--radar-cyan-dim) 1px, transparent 1px),
+    linear-gradient(90deg, var(--radar-cyan-dim) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Glass morphism panels */
+.glass-panel {
+  background: rgba(18, 19, 24, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(58, 61, 74, 0.5);
+  border-radius: 16px;
+}
+
+/* Glow effects */
+.glow-green {
+  box-shadow: 0 0 20px var(--signal-green-dim), 0 0 40px var(--signal-green-dim);
+}
+
+/* Status pulse animation */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Input styling */
+input, select {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--graphite);
+  border: 1px solid var(--slate);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: var(--white);
+  transition: all 0.2s;
+}
+
+input::placeholder {
+  color: var(--slate);
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--signal-green);
+  box-shadow: 0 0 0 3px var(--signal-green-dim);
+}
+
+/* Button styles */
+.btn-primary {
+  background: linear-gradient(135deg, var(--signal-green), #00cc6a);
+  color: var(--void);
+  font-weight: 600;
+  padding: 14px 28px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Outfit', sans-serif;
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px var(--signal-green-dim);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-secondary {
+  background: var(--graphite);
+  color: var(--cloud);
+  font-weight: 500;
+  padding: 14px 28px;
+  border-radius: 8px;
+  border: 1px solid var(--slate);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: 'Outfit', sans-serif;
+}
+
+.btn-secondary:hover {
+  background: var(--steel);
+  border-color: var(--fog);
+}
+
+/* Status badges */
+.status-active {
+  background: var(--signal-green-dim);
+  color: var(--signal-green);
+  border: 1px solid var(--signal-green);
+}
+
+.status-executed {
+  background: var(--radar-cyan-dim);
+  color: var(--radar-cyan);
+  border: 1px solid var(--radar-cyan);
+}
+
+.status-expired {
+  background: rgba(255, 71, 87, 0.15);
+  color: var(--alert-red);
+  border: 1px solid var(--alert-red);
+}
+
+.status-refunded {
+  background: rgba(255, 184, 0, 0.15);
+  color: var(--warning-amber);
+  border: 1px solid var(--warning-amber);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--carbon);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--slate);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fog);
+}
+
+/* Wallet selector modal overrides */
+.nws-modal-wrapper {
+  font-family: 'Outfit', sans-serif !important;
+}
+
+/* Monospace text for data */
+.mono {
+  font-family: 'JetBrains Mono', monospace;
 }
