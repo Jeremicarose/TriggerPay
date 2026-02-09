@@ -151,7 +151,7 @@ export async function claimRefund(triggerId: string): Promise<void> {
           gas: GAS_FOR_CLAIM_REFUND,
           deposit: "0",
         },
-      },
+      } as unknown as Action,
     ],
   });
 }
