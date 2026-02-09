@@ -39,7 +39,7 @@ async function viewMethod<T>(methodName: string, args: object = {}): Promise<T> 
   });
 
   // Parse the result
-  const resultBytes = (result as { result: number[] }).result;
+  const resultBytes = (result as unknown as { result: number[] }).result;
   const resultString = String.fromCharCode(...resultBytes);
   return JSON.parse(resultString) as T;
 }
