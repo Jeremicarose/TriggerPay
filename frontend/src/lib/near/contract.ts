@@ -6,6 +6,7 @@
  */
 
 import { providers } from "near-api-js";
+import type { Action } from "@near-wallet-selector/core";
 import { getWallet } from "./wallet";
 import {
   CONTRACT_ID,
