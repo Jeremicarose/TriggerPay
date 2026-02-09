@@ -74,7 +74,7 @@ export async function createTrigger(
           gas: GAS_FOR_CREATE_TRIGGER,
           deposit: deposit,
         },
-      },
+      } as unknown as Action,
     ],
   });
 }
