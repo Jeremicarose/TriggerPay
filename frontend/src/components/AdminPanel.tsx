@@ -10,4 +10,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { runMonitorCycle, getMonitorActivity, getAllTriggers } from "@/lib/near/contract";
-import type { TriggerView}
+import type { TriggerView } from "@/types/contract";
+import { useQueryClient } from "@tanstack/react-query";
+
+interface ActivityEntry {
+  
+}
