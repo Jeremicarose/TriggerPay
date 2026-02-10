@@ -1,120 +1,81 @@
 /**
- * Smart Contract Interaction Functions
+ * Agent API Client
  *
- * This module provides typed functions to interact with the TriggerPay
- * smart contract deployed at triggerpay.testnet
+ * Talks to the TriggerPay Shade Agent API for trigger management.
+ * Replaces direct NEAR contract calls — the agent handles storage
+ * and Chain Signatures payouts from inside the TEE.
  */
 
-import { providers } from "near-api-js";
-import type { Action } from "@near-wallet-selector/core";
-import { getWallet } from "./wallet";
-import {
-  CONTRACT_ID,
-  NODE_URL,
-  GAS_FOR_CREATE_TRIGGER,
-  GAS_FOR_CLAIM_REFUND,
-  parseNearAmount,
-} from "./config";
 import type {
   Condition,
   Payout,
   TriggerView,
   ContractStats,
-  Attestation,
 } from "@/types/contract";
 
-// Create a provider for view calls (no wallet needed)
-const provider = new providers.JsonRpcProvider({ url: NODE_URL });
+const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001";
 
 /**
- * Helper to make view calls to the contract
- * View calls are free and don't require a wallet
- */
-async function viewMethod<T>(methodName: string, args: object = {}): Promise<T> {
-  const result = await provider.query({
-    request_type: "call_function",
-    account_id: CONTRACT_ID,
-    method_name: methodName,
-    args_base64: Buffer.from(JSON.stringify(args)).toString("base64"),
-    finality: "final",
-  });
-
-  // Parse the result
-  const resultBytes = (result as unknown as { result: number[] }).result;
-  const resultString = String.fromCharCode(...resultBytes);
-  return JSON.parse(resultString) as T;
-}
-
-/**
- * Create a new trigger with attached NEAR deposit
- *
- * @param condition - The condition that triggers payout (flight cancellation)
- * @param payout - Where to send funds when triggered
- * @param depositNear - Amount of NEAR to deposit (minimum 1 NEAR)
- * @returns Transaction result
+ * Create a new trigger via the agent API.
  */
 export async function createTrigger(
   condition: Condition,
   payout: Payout,
-  depositNear: string
+  _depositNear: string // kept for interface compatibility, not used in agent mode
 ): Promise<void> {
-  const wallet = await getWallet();
-
-  // Convert NEAR to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
-  const deposit = parseNearAmount(depositNear);
-
-  await wallet.signAndSendTransaction({
-    receiverId: CONTRACT_ID,
-    actions: [
-      {
-        type: "FunctionCall",
-        params: {
-          methodName: "create_trigger",
-          args: { condition, payout },
-          gas: GAS_FOR_CREATE_TRIGGER,
-          deposit: deposit,
-        },
-      } as unknown as Action,
-    ],
+  const res = await fetch(`${AGENT_URL}/api/triggers`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      owner: "demo.testnet", // placeholder — wallet integration optional for demo
+      condition,
+      payout,
+    }),
   });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    throw new Error(err.error || `Agent API returned ${res.status}`);
+  }
 }
 
 /**
- * Get a single trigger by ID
- *
- * @param triggerId - The trigger ID (e.g., "trig_00000001")
- * @returns Trigger details or null if not found
+ * Get a single trigger by ID.
  */
 export async function getTrigger(triggerId: string): Promise<TriggerView | null> {
-  return viewMethod<TriggerView | null>("get_trigger", { trigger_id: triggerId });
+  const res = await fetch(`${AGENT_URL}/api/triggers/${triggerId}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Agent API returned ${res.status}`);
+  return res.json();
 }
 
 /**
- * Get all triggers for a specific user
- *
- * @param accountId - The NEAR account ID
- * @returns Array of user's triggers
+ * Get all triggers, optionally filtered by owner.
  */
 export async function getUserTriggers(accountId: string): Promise<TriggerView[]> {
-  return viewMethod<TriggerView[]>("get_user_triggers", { account_id: accountId });
+  const res = await fetch(
+    `${AGENT_URL}/api/triggers?owner=${encodeURIComponent(accountId)}`
+  );
+  if (!res.ok) throw new Error(`Agent API returned ${res.status}`);
+  return res.json();
 }
 
 /**
- * Get all active triggers (for monitoring)
- *
- * @returns Array of active triggers
+ * Get all triggers (no filter).
  */
-export async function getActiveTriggers(): Promise<TriggerView[]> {
-  return viewMethod<TriggerView[]>("get_active_triggers", {});
+export async function getAllTriggers(): Promise<TriggerView[]> {
+  const res = await fetch(`${AGENT_URL}/api/triggers`);
+  if (!res.ok) throw new Error(`Agent API returned ${res.status}`);
+  return res.json();
 }
 
 /**
- * Get contract statistics
- *
- * @returns Tuple of [total, active, executed] counts
+ * Get contract stats: [total, active, executed].
  */
 export async function getStats(): Promise<ContractStats> {
-  const result = await viewMethod<[number, number, number]>("get_stats", {});
+  const res = await fetch(`${AGENT_URL}/api/triggers/stats`);
+  if (!res.ok) throw new Error(`Agent API returned ${res.status}`);
+  const result: [number, number, number] = await res.json();
   return {
     total: result[0],
     active: result[1],
@@ -123,35 +84,39 @@ export async function getStats(): Promise<ContractStats> {
 }
 
 /**
- * Get attestations for a trigger
- *
- * @param triggerId - The trigger ID
- * @returns Array of attestations
+ * Get recent monitoring activity from the agent.
  */
-export async function getAttestations(triggerId: string): Promise<Attestation[]> {
-  return viewMethod<Attestation[]>("get_attestations", { trigger_id: triggerId });
+export async function getMonitorActivity(): Promise<
+  Array<{
+    timestamp: string;
+    triggerId: string;
+    flight: string;
+    status: string;
+    conditionMet: boolean;
+    txHash?: string;
+  }>
+> {
+  const res = await fetch(`${AGENT_URL}/api/monitor/activity`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.activity || [];
 }
 
 /**
- * Claim refund for an expired trigger
- *
- * @param triggerId - The trigger ID to refund
+ * Trigger a manual monitoring cycle (for the demo button).
+ */
+export async function runMonitorCycle(): Promise<any> {
+  const res = await fetch(`${AGENT_URL}/api/monitor`);
+  if (!res.ok) throw new Error(`Monitor cycle failed: ${res.status}`);
+  return res.json();
+}
+
+/**
+ * Claim refund — deletes the trigger from the agent store.
  */
 export async function claimRefund(triggerId: string): Promise<void> {
-  const wallet = await getWallet();
-
-  await wallet.signAndSendTransaction({
-    receiverId: CONTRACT_ID,
-    actions: [
-      {
-        type: "FunctionCall",
-        params: {
-          methodName: "claim_refund",
-          args: { trigger_id: triggerId },
-          gas: GAS_FOR_CLAIM_REFUND,
-          deposit: "0",
-        },
-      } as unknown as Action,
-    ],
+  const res = await fetch(`${AGENT_URL}/api/triggers/${triggerId}`, {
+    method: "DELETE",
   });
+  if (!res.ok) throw new Error(`Failed to cancel trigger: ${res.status}`);
 }
