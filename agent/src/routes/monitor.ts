@@ -1,14 +1,19 @@
 import { Hono } from "hono";
 import { requestSignature } from "@neardefi/shade-agent-js";
 import { getEvmAdapter, DERIVATION_PATHS } from "../utils/ethereum";
-import { getActiveTriggers, type TriggerView } from "../utils/near-contract";
+import {
+  getActiveTriggers,
+  markExecuted,
+  incrementAttestationCount,
+  type Trigger,
+} from "../utils/trigger-store";
 import { getFlightStatus, isConditionMet } from "../utils/flight-api";
 import { utils } from "chainsig.js";
 const { toRSV, uint8ArrayToHex } = utils.cryptography;
 
 const app = new Hono();
 
-// In-memory log of recent monitoring activity (shown in frontend/demo)
+// In-memory log of recent monitoring activity (visible in demo terminal)
 const recentActivity: Array<{
   timestamp: string;
   triggerId: string;
@@ -28,8 +33,7 @@ function logActivity(entry: (typeof recentActivity)[0]) {
  * Runs one monitoring cycle: checks all active triggers against the flight API.
  * If a condition is met, signs and broadcasts an ETH payout via Chain Signatures.
  *
- * This endpoint is called by the polling loop AND can be triggered manually
- * during the demo for the "visceral moment."
+ * Called by the polling loop AND can be hit manually during the demo.
  */
 app.get("/", async (c) => {
   const contractId = process.env.NEXT_PUBLIC_contractId;
@@ -47,7 +51,7 @@ app.get("/", async (c) => {
   }> = [];
 
   try {
-    const triggers = await getActiveTriggers();
+    const triggers = getActiveTriggers();
 
     if (triggers.length === 0) {
       return c.json({ message: "No active triggers", results: [] });
@@ -88,7 +92,7 @@ app.get("/activity", async (c) => {
  * Process a single trigger: check flight, optionally sign payout.
  */
 async function processTrigger(
-  trigger: TriggerView,
+  trigger: Trigger,
   contractId: string
 ): Promise<{
   triggerId: string;
@@ -104,6 +108,9 @@ async function processTrigger(
     const flight = await getFlightStatus(flightNumber);
     const conditionMet = isConditionMet(flight);
 
+    // Count every check as an attestation (visible on trigger card)
+    incrementAttestationCount(trigger.id);
+
     console.log(
       `[monitor] ${trigger.id} | ${flightNumber}: ${flight.status} | met=${conditionMet}`
     );
@@ -118,10 +125,13 @@ async function processTrigger(
       };
     }
 
-    // Condition met — execute cross-chain payout
+    // Condition met — execute cross-chain payout via Chain Signatures
     console.log(`[monitor] CONDITION MET for ${trigger.id} — initiating payout`);
 
     const txHash = await executeChainSignaturePayout(trigger, contractId);
+
+    // Mark the trigger as executed in our store
+    markExecuted(trigger.id, txHash);
 
     return {
       triggerId: trigger.id,
@@ -145,17 +155,17 @@ async function processTrigger(
 
 /**
  * Sign and broadcast an ETH transfer to the user's payout address
- * using NEAR Chain Signatures via the Shade Agent.
+ * using NEAR Chain Signatures via the Shade Agent sidecar.
  */
 async function executeChainSignaturePayout(
-  trigger: TriggerView,
+  trigger: Trigger,
   contractId: string
 ): Promise<string> {
   const chain = trigger.payout.chain;
   const path = DERIVATION_PATHS[chain] || DERIVATION_PATHS.Ethereum;
   const evm = getEvmAdapter(chain);
 
-  // Derive the sender address (agent's derived EVM address)
+  // Derive the sender address (agent's derived EVM address for this chain)
   const { address: senderAddress } = await evm.deriveAddressAndPublicKey(
     contractId,
     path
@@ -173,7 +183,7 @@ async function executeChainSignaturePayout(
     value: BigInt(trigger.payout.amount),
   });
 
-  // Request Chain Signature from the MPC network via the Shade Agent contract
+  // Request Chain Signature from MPC network via Shade Agent sidecar
   const signRes = await requestSignature({
     path,
     payload: uint8ArrayToHex(hashesToSign[0]),
@@ -182,17 +192,17 @@ async function executeChainSignaturePayout(
 
   console.log("[payout] Signature received from MPC network");
 
-  // Reconstruct the signed transaction
+  // Attach the signature to the transaction
   const signedTransaction = evm.finalizeTransactionSigning({
     transaction,
     rsvSignatures: [toRSV(signRes)],
   });
 
-  // Broadcast to the target chain
+  // Broadcast to the target EVM chain
   const txResult = await evm.broadcastTx(signedTransaction);
   const txHash = txResult.hash;
 
-  console.log(`[payout] Transaction broadcast: ${txHash}`);
+  console.log(`[payout] Broadcast success: ${txHash}`);
   return txHash;
 }
 
