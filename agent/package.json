@@ -1,0 +1,29 @@
+{
+  "name": "triggerpay-shade-agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "docker:build": "docker build --platform linux/amd64 -t triggerpay/agent:latest .",
+    "docker:build:no-cache": "docker build --no-cache --platform linux/amd64 -t triggerpay/agent:latest .",
+    "docker:push": "docker push triggerpay/agent",
+    "phala:deploy": "phala cvms create --name triggerpay-agent --vcpu 1 --compose ./docker-compose.yaml --env-file ./.env.development.local"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.15.0",
+    "@neardefi/shade-agent-js": "^1.0.0",
+    "chainsig.js": "^1.1.11",
+    "dotenv": "^16.5.0",
+    "ethers": "^6.11.1",
+    "hono": "^4.8.4",
+    "near-api-js": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}
