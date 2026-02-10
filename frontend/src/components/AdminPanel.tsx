@@ -14,5 +14,9 @@ import type { TriggerView } from "@/types/contract";
 import { useQueryClient } from "@tanstack/react-query";
 
 interface ActivityEntry {
-  
+  timestamp: string;
+  triggerId: string;
+  flight: string;
+  status: string;
+  condtitionMet: boolean
 }
