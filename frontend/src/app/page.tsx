@@ -88,6 +88,11 @@ export default function Home() {
         </div>
       </div>
 
+      {/* Demo Control Panel — the "visceral demo moment" for judges */}
+      <div className="max-w-6xl mx-auto px-4 mt-12">
+        <AdminPanel />
+      </div>
+
       {/* Footer */}
       <footer className="mt-16 text-center text-sm text-[var(--slate)]">
         <p>
