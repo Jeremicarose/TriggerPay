@@ -13,6 +13,7 @@
 import { Header } from "@/components/Header";
 import { CreateTriggerForm } from "@/components/CreateTriggerForm";
 import { TriggersList } from "@/components/TriggersList";
+import { AdminPanel } from "@/components/AdminPanel";
 
 export default function Home() {
   return (
