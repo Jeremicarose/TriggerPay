@@ -3,11 +3,12 @@
 /**
  * TriggerPay Home Page
  *
- * Main interface for creating and managing flight insurance triggers.
- * Features:
- * - Wallet connection
- * - Create new triggers
- * - View/manage existing triggers
+ * Main interface: create triggers, monitor flights, see payouts.
+ * Layout flows top-to-bottom for the demo:
+ * 1. Header with stats
+ * 2. Hero
+ * 3. Create form + Admin panel side by side
+ * 4. All triggers (full width)
  */
 
 import { Header } from "@/components/Header";
@@ -24,8 +25,8 @@ export default function Home() {
       </div>
 
       {/* Hero Section */}
-      <div className="max-w-6xl mx-auto px-4 mb-12">
-        <div className="text-center py-12">
+      <div className="max-w-6xl mx-auto px-4 mb-10">
+        <div className="text-center py-10">
           <h1 className="text-4xl md:text-5xl font-bold text-[var(--white)] mb-4">
             Conditional Payments,{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--signal-green)] to-[var(--radar-cyan)]">
@@ -40,7 +41,7 @@ export default function Home() {
         </div>
 
         {/* How It Works */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
           <div className="glass-panel p-6 text-center">
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--graphite)] flex items-center justify-center text-[var(--signal-green)]">
               <span className="text-xl font-bold">1</span>
@@ -74,38 +75,23 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
-          {/* Create Form - Left Side */}
-          <div className="lg:col-span-2">
-            <CreateTriggerForm />
-          </div>
-
-          {/* Triggers List - Right Side */}
-          <div className="lg:col-span-3">
-            <TriggersList />
-          </div>
+      {/* Create Form + Admin Panel side by side */}
+      <div className="max-w-6xl mx-auto px-4 mb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <CreateTriggerForm />
+          <AdminPanel />
         </div>
       </div>
 
-      {/* Demo Control Panel — the "visceral demo moment" for judges */}
-      <div className="max-w-6xl mx-auto px-4 mt-12">
-        <AdminPanel />
+      {/* Triggers List — full width */}
+      <div className="max-w-6xl mx-auto px-4">
+        <TriggersList />
       </div>
 
       {/* Footer */}
       <footer className="mt-16 text-center text-sm text-[var(--slate)]">
         <p>
-          Built on NEAR Protocol with Chain Signatures |{" "}
-          <a
-            href="https://github.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[var(--fog)] hover:text-[var(--cloud)]"
-          >
-            GitHub
-          </a>
+          Built on NEAR Protocol with Chain Signatures &amp; Shade Agents
         </p>
       </footer>
     </main>
