@@ -1,6 +1,6 @@
 services:
-  # shade-agent-api must always be first — it's the TEE sidecar that handles
-  # NEAR account derivation, code hash attestation, and Chain Signatures signing.
+  # shade-agent-api — TEE sidecar for code hash attestation.
+  # Kept for TEE proof; signing now goes direct to NEAR MPC contract.
   shade-agent-api:
     environment:
       NEAR_ACCOUNT_ID: ${NEAR_ACCOUNT_ID}
@@ -16,18 +16,17 @@ services:
       - /var/run/tappd.sock:/var/run/tappd.sock
     restart: always
 
-  # Our TriggerPay agent — monitors flights, triggers Chain Signature payouts
+  # TriggerPay agent — monitors flights, signs payouts via NEAR MPC directly
   triggerpay-agent:
     environment:
       NEXT_PUBLIC_contractId: ${NEXT_PUBLIC_contractId}
-      TRIGGERPAY_CONTRACT_ID: ${TRIGGERPAY_CONTRACT_ID:-triggerpay.testnet}
-      FLIGHT_API_URL: ${FLIGHT_API_URL:-http://localhost:3000}
+      NEAR_ACCOUNT_ID: ${NEAR_ACCOUNT_ID}
+      NEAR_PRIVATE_KEY: ${NEAR_PRIVATE_KEY}
+      FLIGHT_API_URL: ${FLIGHT_API_URL:-https://triggerpay.vercel.app}
       POLL_INTERVAL_MS: ${POLL_INTERVAL_MS:-15000}
     platform: linux/amd64
-    image: triggerpay/agent:latest
+    image: jeremic55/triggerpay-agent:latest
     container_name: triggerpay-agent
     ports:
       - "3001:3001"
-    volumes:
-      - /var/run/tappd.sock:/var/run/tappd.sock
     restart: always
