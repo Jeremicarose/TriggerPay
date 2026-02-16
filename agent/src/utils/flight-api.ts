@@ -5,8 +5,6 @@
  * In production this would hit FlightAware or AviationStack.
  */
 
-const FLIGHT_API_URL = process.env.FLIGHT_API_URL || "http://localhost:3000";
-
 export interface FlightData {
   flight_number: string;
   status: string;
@@ -20,9 +18,12 @@ export interface FlightData {
 
 /**
  * Fetch the current status of a flight from the mock API.
+ * Reads FLIGHT_API_URL at call time (not module load) to avoid import hoisting issues.
  */
 export async function getFlightStatus(flightNumber: string): Promise<FlightData> {
-  const url = `${FLIGHT_API_URL}/api/flight/${encodeURIComponent(flightNumber)}`;
+  const baseUrl = process.env.FLIGHT_API_URL || "http://localhost:3000";
+  const url = `${baseUrl}/api/flight/${encodeURIComponent(flightNumber)}`;
+  console.log(`[flight-api] Fetching ${url}`);
   const res = await fetch(url);
 
   if (!res.ok) {
