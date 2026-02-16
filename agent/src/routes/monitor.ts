@@ -128,19 +128,29 @@ async function processTrigger(
     // Condition met — execute cross-chain payout via Chain Signatures
     console.log(`[monitor] CONDITION MET for ${trigger.id} — initiating payout`);
 
-    const txHash = await executeChainSignaturePayout(trigger, contractId);
+    try {
+      const txHash = await executeChainSignaturePayout(trigger, contractId);
+      markExecuted(trigger.id, txHash);
 
-    // Mark the trigger as executed in our store
-    markExecuted(trigger.id, txHash);
-
-    return {
-      triggerId: trigger.id,
-      flight: flightNumber,
-      flightStatus: flight.status,
-      conditionMet: true,
-      action: "payout_signed",
-      txHash,
-    };
+      return {
+        triggerId: trigger.id,
+        flight: flightNumber,
+        flightStatus: flight.status,
+        conditionMet: true,
+        action: "payout_signed",
+        txHash,
+      };
+    } catch (payoutError) {
+      // Payout failed but condition WAS met — report accurately
+      console.error(`[monitor] Payout failed for ${trigger.id}:`, payoutError);
+      return {
+        triggerId: trigger.id,
+        flight: flightNumber,
+        flightStatus: flight.status,
+        conditionMet: true,
+        action: `payout_failed: ${payoutError}`,
+      };
+    }
   } catch (error) {
     console.error(`[monitor] Error processing ${trigger.id}:`, error);
     return {
