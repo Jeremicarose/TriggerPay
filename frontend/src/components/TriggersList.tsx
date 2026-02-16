@@ -30,6 +30,13 @@ function formatEth(weiString: string): string {
   return eth.toFixed(4);
 }
 
+// Block explorer URLs per chain (Sepolia testnets)
+const EXPLORER_URLS: Record<string, string> = {
+  Ethereum: "https://sepolia.etherscan.io/tx/",
+  Base: "https://sepolia.basescan.org/tx/",
+  Arbitrum: "https://sepolia.arbiscan.io/tx/",
+};
+
 // Status badge component
 function StatusBadge({ status }: { status: Status }) {
   const statusClasses = {

@@ -55,10 +55,10 @@ export default function Home() {
             <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[var(--graphite)] flex items-center justify-center text-[var(--radar-cyan)]">
               <span className="text-xl font-bold">2</span>
             </div>
-            <h3 className="font-semibold text-[var(--white)] mb-2">We Monitor</h3>
+            <h3 className="font-semibold text-[var(--white)] mb-2">Agent Monitors</h3>
             <p className="text-sm text-[var(--fog)]">
-              Our TEE-based agent monitors flight status via trusted APIs. All checks
-              are cryptographically attested.
+              A Shade Agent in a TEE continuously monitors conditions via
+              real-world APIs. Every check is cryptographically attested.
             </p>
           </div>
           <div className="glass-panel p-6 text-center">
@@ -67,8 +67,8 @@ export default function Home() {
             </div>
             <h3 className="font-semibold text-[var(--white)] mb-2">Get Paid</h3>
             <p className="text-sm text-[var(--fog)]">
-              If cancelled, receive instant payout to your EVM address on Ethereum,
-              Base, or Arbitrum.
+              When the condition is met, receive an instant cross-chain payout
+              to your EVM address via Chain Signatures.
             </p>
           </div>
         </div>
