@@ -1,6 +1,5 @@
 import { Hono } from "hono";
-import { requestSignature } from "@neardefi/shade-agent-js";
-import { getEvmAdapter, DERIVATION_PATHS } from "../utils/ethereum";
+import { getEvmAdapter, DERIVATION_PATHS, signWithMPC } from "../utils/ethereum";
 import {
   getActiveTriggers,
   markExecuted,
@@ -8,8 +7,6 @@ import {
   type Trigger,
 } from "../utils/trigger-store";
 import { getFlightStatus, isConditionMet } from "../utils/flight-api";
-import { utils } from "chainsig.js";
-const { toRSV, uint8ArrayToHex } = utils.cryptography;
 
 const app = new Hono();
 
@@ -193,10 +190,10 @@ async function executeChainSignaturePayout(
     value: BigInt(trigger.payout.amount),
   });
 
-  // Request Chain Signature from MPC network via Shade Agent sidecar
-  const signRes = await requestSignature({
+  // Request Chain Signature directly from NEAR MPC contract (no sidecar needed)
+  const rsvSignature = await signWithMPC({
     path,
-    payload: uint8ArrayToHex(hashesToSign[0]),
+    payload: hashesToSign[0],
     keyType: "Ecdsa",
   });
 
@@ -205,7 +202,7 @@ async function executeChainSignaturePayout(
   // Attach the signature to the transaction
   const signedTransaction = evm.finalizeTransactionSigning({
     transaction,
-    rsvSignatures: [toRSV(signRes)],
+    rsvSignatures: [rsvSignature],
   });
 
   // Broadcast to the target EVM chain
