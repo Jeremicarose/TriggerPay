@@ -76,7 +76,7 @@ export async function signWithMPC(args: {
 
   // Set up in-memory key store with the agent's NEAR credentials
   const keyStore = new keyStores.InMemoryKeyStore();
-  const keyPair = KeyPair.fromString(privateKey);
+  const keyPair = KeyPair.fromString(privateKey as any);
   await keyStore.setKey("testnet", accountId, keyPair);
 
   const near = await connect({
