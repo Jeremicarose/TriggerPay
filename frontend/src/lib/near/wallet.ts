@@ -35,9 +35,8 @@ export async function initWallet(): Promise<WalletSelector> {
   });
 
   // Setup the modal UI for wallet selection
-  modal = setupModal(walletSelector, {
-    contractId: CONTRACT_ID,
-  });
+  // No contractId needed — triggers are managed by the agent API, not a NEAR contract
+  modal = setupModal(walletSelector, {});
 
   return walletSelector;
 }

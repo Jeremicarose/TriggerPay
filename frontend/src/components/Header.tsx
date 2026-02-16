@@ -50,7 +50,7 @@ export function Header() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-[var(--white)]">TriggerPay</h1>
-            <p className="text-xs text-[var(--fog)]">Flight Insurance on NEAR</p>
+            <p className="text-xs text-[var(--fog)]">Conditional Payments on NEAR</p>
           </div>
         </div>
 
