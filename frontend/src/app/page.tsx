@@ -27,14 +27,15 @@ export default function Home() {
       <div className="max-w-6xl mx-auto px-4 mb-12">
         <div className="text-center py-12">
           <h1 className="text-4xl md:text-5xl font-bold text-[var(--white)] mb-4">
-            Flight Insurance,{" "}
+            Conditional Payments,{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--signal-green)] to-[var(--radar-cyan)]">
-              Reimagined
+              Verified by TEE
             </span>
           </h1>
           <p className="text-lg text-[var(--fog)] max-w-2xl mx-auto">
-            Get automatic payouts when your flight is cancelled. Powered by NEAR
-            Chain Signatures for trustless cross-chain settlements.
+            Set a real-world condition. When it triggers, receive an automatic
+            cross-chain payout — verified in a Trusted Execution Environment,
+            signed via NEAR Chain Signatures.
           </p>
         </div>
 
@@ -46,8 +47,8 @@ export default function Home() {
             </div>
             <h3 className="font-semibold text-[var(--white)] mb-2">Create Trigger</h3>
             <p className="text-sm text-[var(--fog)]">
-              Enter your flight details and payout address. Deposit NEAR to fund the
-              insurance.
+              Define a real-world condition and a payout address. Your trigger
+              starts monitoring immediately.
             </p>
           </div>
           <div className="glass-panel p-6 text-center">
