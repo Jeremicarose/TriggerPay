@@ -125,6 +125,21 @@ function TriggerCard({ trigger }: { trigger: TriggerView }) {
         </div>
       </div>
 
+      {/* Executed tx link */}
+      {trigger.executed_tx && (
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-[rgba(0,255,136,0.05)] border border-[rgba(0,255,136,0.2)] mb-4">
+          <span className="text-xs text-[var(--signal-green)] font-semibold">PAYOUT TX</span>
+          <a
+            href={`${EXPLORER_URLS[trigger.payout.chain] || EXPLORER_URLS.Ethereum}${trigger.executed_tx}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mono text-xs text-[var(--radar-cyan)] hover:underline truncate"
+          >
+            {trigger.executed_tx.slice(0, 16)}...{trigger.executed_tx.slice(-8)}
+          </a>
+        </div>
+      )}
+
       {/* Trigger ID */}
       <div className="flex items-center justify-between pt-4 border-t border-[var(--steel)]">
         <span className="mono text-xs text-[var(--slate)]">{trigger.id}</span>
@@ -203,7 +218,7 @@ export function TriggersList() {
           No Triggers Yet
         </h3>
         <p className="text-[var(--fog)]">
-          Create your first flight insurance trigger above
+          Create your first conditional payment trigger above
         </p>
       </div>
     );
