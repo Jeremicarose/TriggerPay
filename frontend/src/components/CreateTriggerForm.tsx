@@ -117,7 +117,7 @@ export function CreateTriggerForm() {
           Connect Your Wallet
         </h3>
         <p className="text-[var(--fog)] mb-6">
-          Connect your NEAR wallet to create flight insurance triggers
+          Connect your NEAR wallet to create conditional payment triggers
         </p>
         <button onClick={connect} className="btn-primary">
           Connect Wallet
@@ -129,7 +129,7 @@ export function CreateTriggerForm() {
   return (
     <div className="glass-panel p-6">
       <h2 className="text-xl font-semibold text-[var(--white)] mb-6">
-        Create Insurance Trigger
+        Create Trigger
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-5">
