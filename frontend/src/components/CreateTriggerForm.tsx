@@ -96,36 +96,6 @@ export function CreateTriggerForm() {
     }
   };
 
-  if (!isConnected) {
-    return (
-      <div className="glass-panel p-8 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[var(--graphite)] flex items-center justify-center">
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            className="text-[var(--fog)]"
-          >
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-semibold text-[var(--white)] mb-2">
-          Connect Your Wallet
-        </h3>
-        <p className="text-[var(--fog)] mb-6">
-          Connect your NEAR wallet to create conditional payment triggers
-        </p>
-        <button onClick={connect} className="btn-primary">
-          Connect Wallet
-        </button>
-      </div>
-    );
-  }
-
   return (
     <div className="glass-panel p-6">
       <h2 className="text-xl font-semibold text-[var(--white)] mb-6">
