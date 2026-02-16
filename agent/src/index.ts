@@ -3,10 +3,9 @@ import { serve } from "@hono/node-server";
 import { cors } from "hono/cors";
 import dotenv from "dotenv";
 
-// Load env for local development
-if (process.env.NODE_ENV !== "production") {
-  dotenv.config({ path: ".env.development.local" });
-}
+// Load env — .env.development.local overrides .env (dotenv won't overwrite existing vars)
+dotenv.config({ path: ".env.development.local" });
+dotenv.config(); // fallback to .env
 
 // Import routes
 import agentAccount from "./routes/agentAccount";
