@@ -162,7 +162,7 @@ async function processTrigger(
 
 /**
  * Sign and broadcast an ETH transfer to the user's payout address
- * using NEAR Chain Signatures via the Shade Agent sidecar.
+ * using NEAR Chain Signatures via direct MPC contract call.
  */
 async function executeChainSignaturePayout(
   trigger: Trigger,
