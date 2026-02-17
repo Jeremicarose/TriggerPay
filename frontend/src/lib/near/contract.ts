@@ -1,9 +1,8 @@
 /**
  * Agent API Client
  *
- * Talks to the TriggerPay Shade Agent API for trigger management.
- * Replaces direct NEAR contract calls — the agent handles storage
- * and Chain Signatures payouts from inside the TEE.
+ * Talks to the embedded agent API routes (same origin).
+ * All agent endpoints live at /api/agent/* on the same Vercel deployment.
  */
 
 import type {
@@ -13,7 +12,7 @@ import type {
   ContractStats,
 } from "@/types/contract";
 
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001";
+const AGENT_BASE = "/api/agent";
 
 /**
  * Create a new trigger via the agent API.
@@ -21,13 +20,13 @@ const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001";
 export async function createTrigger(
   condition: Condition,
   payout: Payout,
-  _depositNear: string // kept for interface compatibility, not used in agent mode
+  _depositNear: string
 ): Promise<void> {
-  const res = await fetch(`${AGENT_URL}/api/triggers`, {
+  const res = await fetch(`${AGENT_BASE}/triggers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      owner: "demo.testnet", // placeholder — wallet integration optional for demo
+      owner: "demo.testnet",
       condition,
       payout,
     }),
@@ -43,7 +42,7 @@ export async function createTrigger(
  * Get a single trigger by ID.
  */
 export async function getTrigger(triggerId: string): Promise<TriggerView | null> {
-  const res = await fetch(`${AGENT_URL}/api/triggers/${triggerId}`);
+  const res = await fetch(`${AGENT_BASE}/triggers/${triggerId}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Agent API returned ${res.status}`);
   return res.json();
@@ -54,7 +53,7 @@ export async function getTrigger(triggerId: string): Promise<TriggerView | null>
  */
 export async function getUserTriggers(accountId: string): Promise<TriggerView[]> {
   const res = await fetch(
-    `${AGENT_URL}/api/triggers?owner=${encodeURIComponent(accountId)}`
+    `${AGENT_BASE}/triggers?owner=${encodeURIComponent(accountId)}`
   );
   if (!res.ok) throw new Error(`Agent API returned ${res.status}`);
   return res.json();
@@ -64,7 +63,7 @@ export async function getUserTriggers(accountId: string): Promise<TriggerView[]>
  * Get all triggers (no filter).
  */
 export async function getAllTriggers(): Promise<TriggerView[]> {
-  const res = await fetch(`${AGENT_URL}/api/triggers`);
+  const res = await fetch(`${AGENT_BASE}/triggers`);
   if (!res.ok) throw new Error(`Agent API returned ${res.status}`);
   return res.json();
 }
@@ -73,7 +72,7 @@ export async function getAllTriggers(): Promise<TriggerView[]> {
  * Get contract stats: [total, active, executed].
  */
 export async function getStats(): Promise<ContractStats> {
-  const res = await fetch(`${AGENT_URL}/api/triggers/stats`);
+  const res = await fetch(`${AGENT_BASE}/triggers/stats`);
   if (!res.ok) throw new Error(`Agent API returned ${res.status}`);
   const result: [number, number, number] = await res.json();
   return {
@@ -96,7 +95,7 @@ export async function getMonitorActivity(): Promise<
     txHash?: string;
   }>
 > {
-  const res = await fetch(`${AGENT_URL}/api/monitor/activity`);
+  const res = await fetch(`${AGENT_BASE}/monitor/activity`);
   if (!res.ok) return [];
   const data = await res.json();
   return data.activity || [];
@@ -106,7 +105,7 @@ export async function getMonitorActivity(): Promise<
  * Trigger a manual monitoring cycle (for the demo button).
  */
 export async function runMonitorCycle(): Promise<any> {
-  const res = await fetch(`${AGENT_URL}/api/monitor`);
+  const res = await fetch(`${AGENT_BASE}/monitor`);
   if (!res.ok) throw new Error(`Monitor cycle failed: ${res.status}`);
   return res.json();
 }
@@ -115,7 +114,7 @@ export async function runMonitorCycle(): Promise<any> {
  * Claim refund — deletes the trigger from the agent store.
  */
 export async function claimRefund(triggerId: string): Promise<void> {
-  const res = await fetch(`${AGENT_URL}/api/triggers/${triggerId}`, {
+  const res = await fetch(`${AGENT_BASE}/triggers/${triggerId}`, {
     method: "DELETE",
   });
   if (!res.ok) throw new Error(`Failed to cancel trigger: ${res.status}`);
