@@ -5,13 +5,20 @@
  */
 
 import { contracts, chainAdapters, type RSVSignature } from "chainsig.js";
-import { createPublicClient, http } from "viem";
+import { createPublicClient, http, fallback } from "viem";
 import { connect, keyStores, KeyPair } from "near-api-js";
 
-const RPC_URLS: Record<string, string> = {
-  Ethereum: "https://ethereum-sepolia-rpc.publicnode.com",
-  Base: "https://sepolia.base.org",
-  Arbitrum: "https://sepolia-rollup.arbitrum.io/rpc",
+const SEPOLIA_RPCS = [
+  "https://ethereum-sepolia-rpc.publicnode.com",
+  "https://rpc.sepolia.org",
+  "https://sepolia.drpc.org",
+  "https://rpc2.sepolia.org",
+];
+
+const RPC_URLS: Record<string, string[]> = {
+  Ethereum: SEPOLIA_RPCS,
+  Base: ["https://sepolia.base.org"],
+  Arbitrum: ["https://sepolia-rollup.arbitrum.io/rpc"],
 };
 
 export const DERIVATION_PATHS: Record<string, string> = {
