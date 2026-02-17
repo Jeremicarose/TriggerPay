@@ -5,14 +5,14 @@
  * the same in-memory trigger store within a warm Lambda container.
  *
  * Routes:
- *   GET  /api/agent/triggers          — list all triggers
- *   POST /api/agent/triggers          — create trigger
- *   GET  /api/agent/triggers/stats    — trigger counts
- *   GET  /api/agent/triggers/:id      — single trigger
- *   DELETE /api/agent/triggers/:id    — delete trigger
- *   GET  /api/agent/monitor           — run monitor cycle
- *   GET  /api/agent/monitor/activity  — recent activity log
- *   GET  /api/agent/eth-account       — derived ETH address + balance
+ *   GET    /api/agent/triggers          — list all triggers
+ *   POST   /api/agent/triggers          — create trigger
+ *   GET    /api/agent/triggers/stats    — trigger counts
+ *   GET    /api/agent/triggers/:id      — single trigger
+ *   DELETE /api/agent/triggers/:id      — delete trigger
+ *   GET    /api/agent/monitor           — run monitor cycle
+ *   GET    /api/agent/monitor/activity  — recent activity log
+ *   GET    /api/agent/eth-account       — derived ETH address + balance
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -72,75 +72,6 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
   // GET /api/agent/monitor/activity
   if (route === "monitor/activity") {
     return NextResponse.json({ activity: getActivity() });
-  }
-
-  // GET /api/agent/diag — test NEAR RPC connectivity + MPC view call
-  if (route === "diag") {
-    const results: Record<string, any> = {};
-    try {
-      const r = await fetch("https://rpc.testnet.near.org/status", {
-        signal: AbortSignal.timeout(5000),
-      });
-      const data = await r.json();
-      results.rpcStatus = { ok: true, version: (data as any).version };
-    } catch (e) {
-      results.rpcStatus = { ok: false, error: String(e) };
-    }
-    // Test view_call to MPC contract (what deriveAddress does internally)
-    try {
-      const r = await fetch("https://rpc.testnet.near.org", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: "1",
-          method: "query",
-          params: {
-            request_type: "call_function",
-            finality: "final",
-            account_id: "v1.signer-prod.testnet",
-            method_name: "public_key",
-            args_base64: "",
-          },
-        }),
-        signal: AbortSignal.timeout(10000),
-      });
-      const data = await r.json();
-      results.viewCall = { ok: true, hasResult: !!(data as any).result };
-    } catch (e) {
-      results.viewCall = { ok: false, error: String(e) };
-    }
-    // Test our patched callFunction
-    try {
-      const res = await fetch("https://rpc.testnet.near.org", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0", id: "1", method: "query",
-          params: {
-            request_type: "call_function", finality: "final",
-            account_id: "v1.signer-prod.testnet",
-            method_name: "public_key", args_base64: "e30=",
-          },
-        }),
-      });
-      const json = await res.json() as any;
-      const hasResult = !!json.result?.result;
-      const decoded = hasResult ? Buffer.from(json.result.result).toString("utf-8") : "no result";
-      results.directRpc = { ok: true, hasResult, decoded: decoded.slice(0, 80) };
-    } catch (e) {
-      results.directRpc = { ok: false, error: String(e) };
-    }
-    // Test chainsig.js with patched provider
-    try {
-      const evm = getEvmAdapter("Ethereum");
-      const contractId = process.env.NEXT_PUBLIC_contractId || "triggerpay-agent.testnet";
-      const { address } = await evm.deriveAddressAndPublicKey(contractId, "ethereum-1");
-      results.chainsig = { ok: true, address };
-    } catch (e: any) {
-      results.chainsig = { ok: false, error: String(e), stack: e.stack?.split("\n").slice(0, 3) };
-    }
-    return NextResponse.json(results);
   }
 
   // GET /api/agent/eth-account

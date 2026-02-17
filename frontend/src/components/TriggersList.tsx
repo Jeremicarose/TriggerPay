@@ -289,7 +289,7 @@ export function TriggersList() {
     return (
       <div className="glass-panel p-8 text-center">
         <p className="text-[var(--alert-red)]">Failed to load triggers</p>
-        <p className="text-xs text-[var(--slate)] mt-1">Is the agent running on port 3001?</p>
+        <p className="text-xs text-[var(--slate)] mt-1">Check your connection and try again</p>
       </div>
     );
   }
