@@ -1,8 +1,9 @@
 /**
  * Catch-all Agent API Route
  *
- * All agent endpoints in a single serverless function so they share
- * the same in-memory trigger store within a warm Lambda container.
+ * ALL demo endpoints in a single serverless function so they share
+ * the same in-memory state (triggers, flight statuses, activity log)
+ * within a warm Lambda container on Vercel.
  *
  * Routes:
  *   GET    /api/agent/triggers          — list all triggers
@@ -13,6 +14,8 @@
  *   GET    /api/agent/monitor           — run monitor cycle
  *   GET    /api/agent/monitor/activity  — recent activity log
  *   GET    /api/agent/eth-account       — derived ETH address + balance
+ *   GET    /api/agent/flight/:number    — get flight status
+ *   POST   /api/agent/flight/set-status — set flight status (admin)
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -33,9 +36,18 @@ import {
   signWithMPC,
 } from "@/lib/agent/ethereum";
 import { logActivity, getActivity } from "@/lib/agent/activity-log";
+import {
+  getFlight,
+  setFlightStatus,
+  type FlightStatus,
+} from "@/lib/flightStore";
 
 // Allow up to 60s for MPC signing (Vercel Pro); Hobby caps at 10s
 export const maxDuration = 60;
+
+const VALID_STATUSES: FlightStatus[] = [
+  "scheduled", "boarding", "departed", "in_air", "landed", "cancelled", "delayed",
+];
 
 type RouteContext = { params: Promise<{ path: string[] }> };
 
@@ -79,6 +91,15 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     return handleEthAccount();
   }
 
+  // GET /api/agent/flight/:number — flight status (shared memory with admin)
+  if (path[0] === "flight" && path.length === 2) {
+    const flightNumber = decodeURIComponent(path[1]);
+    if (!flightNumber || flightNumber.length < 2) {
+      return NextResponse.json({ error: "Invalid flight number" }, { status: 400 });
+    }
+    return NextResponse.json(getFlight(flightNumber));
+  }
+
   return NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 
@@ -89,6 +110,11 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
   // POST /api/agent/triggers
   if (route === "triggers") {
     return handleCreateTrigger(req);
+  }
+
+  // POST /api/agent/flight/set-status — admin: set flight status
+  if (route === "flight/set-status") {
+    return handleSetFlightStatus(req);
   }
 
   return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -155,6 +181,41 @@ async function handleCreateTrigger(req: NextRequest) {
   });
 
   return NextResponse.json(trigger, { status: 201 });
+}
+
+async function handleSetFlightStatus(req: NextRequest) {
+  let body: { flight_number?: string; status?: string };
+
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+  }
+
+  const { flight_number, status } = body;
+
+  if (!flight_number || typeof flight_number !== "string") {
+    return NextResponse.json(
+      { error: "Missing or invalid flight_number" },
+      { status: 400 }
+    );
+  }
+
+  if (!status || !VALID_STATUSES.includes(status as FlightStatus)) {
+    return NextResponse.json(
+      { error: `Invalid status. Must be one of: ${VALID_STATUSES.join(", ")}` },
+      { status: 400 }
+    );
+  }
+
+  setFlightStatus(flight_number, status as FlightStatus);
+
+  return NextResponse.json({
+    success: true,
+    flight_number: flight_number.toUpperCase(),
+    status,
+    message: `Flight ${flight_number.toUpperCase()} status set to "${status}"`,
+  });
 }
 
 async function handleMonitor() {
@@ -231,15 +292,8 @@ async function processTrigger(
   const flightNumber = trigger.condition.flight_number;
 
   try {
-    // Call our own flight API (same Vercel deployment)
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000";
-    const res = await fetch(
-      `${baseUrl}/api/flight/${encodeURIComponent(flightNumber)}`
-    );
-    if (!res.ok) throw new Error(`Flight API ${res.status}`);
-    const flight = await res.json();
+    // Read flight status from shared in-memory store (same Lambda)
+    const flight = getFlight(flightNumber);
 
     const conditionMet = flight.status === "cancelled";
     incrementAttestationCount(trigger.id);
