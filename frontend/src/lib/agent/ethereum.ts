@@ -41,7 +41,8 @@ function createPatchedMPCContract() {
   });
 
   // Patch each provider's sendJsonRpc to use native fetch
-  for (const provider of (contract.provider as any).providers) {
+  const contractAny = contract as any;
+  for (const provider of contractAny.provider.providers) {
     const rpcUrl = provider.connection?.url || NEAR_RPC_URL;
     provider.sendJsonRpc = async function (method: string, params: any) {
       const res = await fetch(rpcUrl, {
