@@ -2,6 +2,7 @@
  * Chain Signatures EVM Setup (Serverless-compatible)
  *
  * Derives ETH addresses and signs transactions via NEAR MPC contract.
+ * Uses a patched NEAR RPC provider that works in Vercel's serverless runtime.
  */
 
 import { contracts, chainAdapters, type RSVSignature } from "chainsig.js";
@@ -12,7 +13,6 @@ const SEPOLIA_RPCS = [
   "https://ethereum-sepolia-rpc.publicnode.com",
   "https://rpc.sepolia.org",
   "https://sepolia.drpc.org",
-  "https://rpc2.sepolia.org",
 ];
 
 const RPC_URLS: Record<string, string[]> = {
@@ -27,24 +27,55 @@ export const DERIVATION_PATHS: Record<string, string> = {
   Arbitrum: "arbitrum-1",
 };
 
-const NEAR_TESTNET_RPCS = [
-  "https://rpc.testnet.near.org",
-  "https://near-testnet.lava.build",
-  "https://test.rpc.fastnear.com",
-  "https://rpc.testnet.pagoda.co",
-];
+const NEAR_RPC_URL = "https://rpc.testnet.near.org";
 
-const MPC_CONTRACT = new contracts.ChainSignatureContract({
-  networkId: "testnet",
-  contractId: "v1.signer-prod.testnet",
-  fallbackRpcUrls: NEAR_TESTNET_RPCS,
-});
+/**
+ * Create a NEAR RPC provider that uses native fetch (works on Vercel).
+ * The @near-js/providers package uses an HTTP client that fails in
+ * serverless environments, so we patch the individual providers.
+ */
+function createPatchedMPCContract() {
+  const contract = new contracts.ChainSignatureContract({
+    networkId: "testnet",
+    contractId: "v1.signer-prod.testnet",
+  });
+
+  // Patch each provider's sendJsonRpc to use native fetch
+  for (const provider of (contract.provider as any).providers) {
+    const rpcUrl = provider.connection?.url || NEAR_RPC_URL;
+    provider.sendJsonRpc = async function (method: string, params: any) {
+      const res = await fetch(rpcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: `${Date.now()}`,
+          method,
+          params,
+        }),
+      });
+      const json = await res.json() as any;
+      if (json.error) {
+        const msg = typeof json.error === "string"
+          ? json.error
+          : json.error.message || JSON.stringify(json.error);
+        throw new Error(msg);
+      }
+      return json.result;
+    };
+  }
+
+  return contract;
+}
+
+const MPC_CONTRACT = createPatchedMPCContract();
 
 export function getEvmAdapter(chain: string) {
   const rpcs = RPC_URLS[chain] || RPC_URLS.Ethereum;
-  const transport = rpcs.length === 1
-    ? http(rpcs[0])
-    : fallback(rpcs.map((url) => http(url)));
+  const transport =
+    rpcs.length === 1
+      ? http(rpcs[0])
+      : fallback(rpcs.map((url) => http(url)));
   const publicClient = createPublicClient({ transport });
   return new chainAdapters.evm.EVM({
     publicClient,
@@ -71,7 +102,7 @@ export async function signWithMPC(args: {
   const near = await connect({
     networkId: "testnet",
     keyStore,
-    nodeUrl: NEAR_TESTNET_RPCS[0],
+    nodeUrl: NEAR_RPC_URL,
   });
 
   const account = await near.account(accountId);
