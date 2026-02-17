@@ -33,8 +33,11 @@ const MPC_CONTRACT = new contracts.ChainSignatureContract({
 });
 
 export function getEvmAdapter(chain: string) {
-  const rpcUrl = RPC_URLS[chain] || RPC_URLS.Ethereum;
-  const publicClient = createPublicClient({ transport: http(rpcUrl) });
+  const rpcs = RPC_URLS[chain] || RPC_URLS.Ethereum;
+  const transport = rpcs.length === 1
+    ? http(rpcs[0])
+    : fallback(rpcs.map((url) => http(url)));
+  const publicClient = createPublicClient({ transport });
   return new chainAdapters.evm.EVM({
     publicClient,
     contract: MPC_CONTRACT,
