@@ -110,14 +110,35 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     } catch (e) {
       results.viewCall = { ok: false, error: String(e) };
     }
-    // Test chainsig.js provider
+    // Test our patched callFunction
+    try {
+      const res = await fetch("https://rpc.testnet.near.org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: "1", method: "query",
+          params: {
+            request_type: "call_function", finality: "final",
+            account_id: "v1.signer-prod.testnet",
+            method_name: "public_key", args_base64: "e30=",
+          },
+        }),
+      });
+      const json = await res.json() as any;
+      const hasResult = !!json.result?.result;
+      const decoded = hasResult ? Buffer.from(json.result.result).toString("utf-8") : "no result";
+      results.directRpc = { ok: true, hasResult, decoded: decoded.slice(0, 80) };
+    } catch (e) {
+      results.directRpc = { ok: false, error: String(e) };
+    }
+    // Test chainsig.js with patched provider
     try {
       const evm = getEvmAdapter("Ethereum");
       const contractId = process.env.NEXT_PUBLIC_contractId || "triggerpay-agent.testnet";
       const { address } = await evm.deriveAddressAndPublicKey(contractId, "ethereum-1");
       results.chainsig = { ok: true, address };
-    } catch (e) {
-      results.chainsig = { ok: false, error: String(e) };
+    } catch (e: any) {
+      results.chainsig = { ok: false, error: String(e), stack: e.stack?.split("\n").slice(0, 3) };
     }
     return NextResponse.json(results);
   }
