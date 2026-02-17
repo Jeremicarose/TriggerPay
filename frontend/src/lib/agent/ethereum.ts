@@ -27,9 +27,17 @@ export const DERIVATION_PATHS: Record<string, string> = {
   Arbitrum: "arbitrum-1",
 };
 
+const NEAR_TESTNET_RPCS = [
+  "https://rpc.testnet.near.org",
+  "https://near-testnet.lava.build",
+  "https://test.rpc.fastnear.com",
+  "https://rpc.testnet.pagoda.co",
+];
+
 const MPC_CONTRACT = new contracts.ChainSignatureContract({
   networkId: "testnet",
   contractId: "v1.signer-prod.testnet",
+  fallbackRpcUrls: NEAR_TESTNET_RPCS,
 });
 
 export function getEvmAdapter(chain: string) {
@@ -63,7 +71,7 @@ export async function signWithMPC(args: {
   const near = await connect({
     networkId: "testnet",
     keyStore,
-    nodeUrl: "https://rpc.testnet.near.org",
+    nodeUrl: NEAR_TESTNET_RPCS[0],
   });
 
   const account = await near.account(accountId);
