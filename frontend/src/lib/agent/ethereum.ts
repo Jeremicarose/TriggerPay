@@ -2,7 +2,8 @@
  * Chain Signatures EVM Setup (Serverless-compatible)
  *
  * Derives ETH addresses and signs transactions via NEAR MPC contract.
- * Uses a patched NEAR RPC provider that works in Vercel's serverless runtime.
+ * Uses native fetch for NEAR RPC calls (the @near-js/providers HTTP
+ * client fails in Vercel's serverless runtime).
  */
 
 import { contracts, chainAdapters, type RSVSignature } from "chainsig.js";
@@ -28,43 +29,62 @@ export const DERIVATION_PATHS: Record<string, string> = {
 };
 
 const NEAR_RPC_URL = "https://rpc.testnet.near.org";
+const MPC_CONTRACT_ID = "v1.signer-prod.testnet";
 
 /**
- * Create a NEAR RPC provider that uses native fetch (works on Vercel).
- * The @near-js/providers package uses an HTTP client that fails in
- * serverless environments, so we patch the individual providers.
+ * Make a NEAR RPC call using native fetch (works in all environments).
+ */
+async function nearRpc(method: string, params: Record<string, any>): Promise<any> {
+  const res = await fetch(NEAR_RPC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: `${Date.now()}`,
+      method,
+      params,
+    }),
+  });
+  const json = (await res.json()) as any;
+  if (json.error) {
+    throw new Error(json.error.message || JSON.stringify(json.error));
+  }
+  return json.result;
+}
+
+/**
+ * Create an MPC contract with a provider patched to use native fetch.
  */
 function createPatchedMPCContract() {
   const contract = new contracts.ChainSignatureContract({
     networkId: "testnet",
-    contractId: "v1.signer-prod.testnet",
+    contractId: MPC_CONTRACT_ID,
   });
 
-  // Patch each provider's sendJsonRpc to use native fetch
-  const contractAny = contract as any;
-  for (const provider of contractAny.provider.providers) {
-    const rpcUrl = provider.connection?.url || NEAR_RPC_URL;
-    provider.sendJsonRpc = async function (method: string, params: any) {
-      const res = await fetch(rpcUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: `${Date.now()}`,
-          method,
-          params,
-        }),
-      });
-      const json = await res.json() as any;
-      if (json.error) {
-        const msg = typeof json.error === "string"
-          ? json.error
-          : json.error.message || JSON.stringify(json.error);
-        throw new Error(msg);
-      }
-      return json.result;
-    };
-  }
+  // Replace the FailoverRpcProvider's core method with native fetch
+  const providerProxy = (contract as any).provider;
+  const originalWithBackoff = providerProxy.withBackoff.bind(providerProxy);
+
+  // Patch callFunction to use native fetch directly
+  providerProxy.callFunction = async function (
+    contractId: string,
+    methodName: string,
+    args: any
+  ) {
+    const argsBase64 = args
+      ? Buffer.from(JSON.stringify(args)).toString("base64")
+      : "";
+    const result = await nearRpc("query", {
+      request_type: "call_function",
+      finality: "final",
+      account_id: contractId,
+      method_name: methodName,
+      args_base64: argsBase64,
+    });
+    // Decode the result bytes to string
+    const resultStr = Buffer.from(result.result).toString("utf-8");
+    return JSON.parse(resultStr);
+  };
 
   return contract;
 }
