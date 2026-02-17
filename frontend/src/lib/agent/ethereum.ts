@@ -9,7 +9,7 @@ import { createPublicClient, http } from "viem";
 import { connect, keyStores, KeyPair } from "near-api-js";
 
 const RPC_URLS: Record<string, string> = {
-  Ethereum: "https://sepolia.drpc.org",
+  Ethereum: "https://ethereum-sepolia-rpc.publicnode.com",
   Base: "https://sepolia.base.org",
   Arbitrum: "https://sepolia-rollup.arbitrum.io/rpc",
 };
