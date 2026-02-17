@@ -74,17 +74,52 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ activity: getActivity() });
   }
 
-  // GET /api/agent/diag — test NEAR RPC connectivity
+  // GET /api/agent/diag — test NEAR RPC connectivity + MPC view call
   if (route === "diag") {
+    const results: Record<string, any> = {};
     try {
       const r = await fetch("https://rpc.testnet.near.org/status", {
         signal: AbortSignal.timeout(5000),
       });
       const data = await r.json();
-      return NextResponse.json({ ok: true, version: (data as any).version });
+      results.rpcStatus = { ok: true, version: (data as any).version };
     } catch (e) {
-      return NextResponse.json({ ok: false, error: String(e) });
+      results.rpcStatus = { ok: false, error: String(e) };
     }
+    // Test view_call to MPC contract (what deriveAddress does internally)
+    try {
+      const r = await fetch("https://rpc.testnet.near.org", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: "1",
+          method: "query",
+          params: {
+            request_type: "call_function",
+            finality: "final",
+            account_id: "v1.signer-prod.testnet",
+            method_name: "public_key",
+            args_base64: "",
+          },
+        }),
+        signal: AbortSignal.timeout(10000),
+      });
+      const data = await r.json();
+      results.viewCall = { ok: true, hasResult: !!(data as any).result };
+    } catch (e) {
+      results.viewCall = { ok: false, error: String(e) };
+    }
+    // Test chainsig.js provider
+    try {
+      const evm = getEvmAdapter("Ethereum");
+      const contractId = process.env.NEXT_PUBLIC_contractId || "triggerpay-agent.testnet";
+      const { address } = await evm.deriveAddressAndPublicKey(contractId, "ethereum-1");
+      results.chainsig = { ok: true, address };
+    } catch (e) {
+      results.chainsig = { ok: false, error: String(e) };
+    }
+    return NextResponse.json(results);
   }
 
   // GET /api/agent/eth-account
