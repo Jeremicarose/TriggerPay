@@ -70,19 +70,36 @@ function createPatchedMPCContract() {
     methodName: string,
     args: any
   ) {
-    const argsBase64 =
-      args && Object.keys(args).length > 0
-        ? Buffer.from(JSON.stringify(args)).toString("base64")
-        : "e30="; // base64 of "{}"
-    const result = await nearRpc("query", {
+    let argsBase64: string;
+    if (!args || (typeof args === "object" && Object.keys(args).length === 0)) {
+      argsBase64 = "e30="; // base64 of "{}"
+    } else if (typeof args === "string") {
+      argsBase64 = Buffer.from(args).toString("base64");
+    } else if (args instanceof Uint8Array || Buffer.isBuffer(args)) {
+      argsBase64 = Buffer.from(args).toString("base64");
+    } else {
+      argsBase64 = Buffer.from(JSON.stringify(args)).toString("base64");
+    }
+
+    const rpcResult = await nearRpc("query", {
       request_type: "call_function",
       finality: "final",
       account_id: contractId,
       method_name: methodName,
       args_base64: argsBase64,
     });
-    // Decode the result bytes to string
-    const resultStr = Buffer.from(result.result).toString("utf-8");
+
+    if (rpcResult.error) {
+      throw new Error(`NEAR view call failed: ${rpcResult.error}`);
+    }
+
+    if (!rpcResult.result) {
+      throw new Error(
+        `NEAR view call returned no result. Keys: ${Object.keys(rpcResult).join(",")}`
+      );
+    }
+
+    const resultStr = Buffer.from(rpcResult.result).toString("utf-8");
     return JSON.parse(resultStr);
   };
 
