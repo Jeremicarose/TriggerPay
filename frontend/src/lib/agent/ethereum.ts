@@ -63,7 +63,6 @@ function createPatchedMPCContract() {
 
   // Replace the FailoverRpcProvider's core method with native fetch
   const providerProxy = (contract as any).provider;
-  const originalWithBackoff = providerProxy.withBackoff.bind(providerProxy);
 
   // Patch callFunction to use native fetch directly
   providerProxy.callFunction = async function (
@@ -71,9 +70,10 @@ function createPatchedMPCContract() {
     methodName: string,
     args: any
   ) {
-    const argsBase64 = args
-      ? Buffer.from(JSON.stringify(args)).toString("base64")
-      : "";
+    const argsBase64 =
+      args && Object.keys(args).length > 0
+        ? Buffer.from(JSON.stringify(args)).toString("base64")
+        : "e30="; // base64 of "{}"
     const result = await nearRpc("query", {
       request_type: "call_function",
       finality: "final",
