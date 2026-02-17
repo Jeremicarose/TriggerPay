@@ -8,10 +8,8 @@
 
 import { contracts, chainAdapters, type RSVSignature } from "chainsig.js";
 import { createPublicClient, http, fallback } from "viem";
-import {
-  JsonRpcProvider,
-  FailoverRpcProvider,
-} from "@near-js/providers";
+// Note: we don't import @near-js/providers — we provide a custom
+// provider object using globalThis.fetch to avoid bundling issues.
 import { connect, keyStores, KeyPair } from "near-api-js";
 
 const SEPOLIA_RPCS = [
@@ -60,54 +58,74 @@ async function nearJsonRpc(url: string, method: string, params: any) {
   return json.result;
 }
 
-function createNativeFetchProvider(url: string): JsonRpcProvider {
-  const provider = new JsonRpcProvider({ url });
-  const p = provider as any;
+/**
+ * Custom NEAR RPC provider using globalThis.fetch.
+ * Implements the same interface as FailoverRpcProvider so chainsig.js
+ * can use it directly without the bundled @near-js/providers.
+ */
+function createNativeFetchProvider(url: string) {
+  return {
+    // Core method used by FailoverRpcProvider.withBackoff
+    callFunction: async (
+      contractId: string,
+      methodName: string,
+      args: any
+    ) => {
+      const argsBase64 =
+        args && typeof args === "object" && Object.keys(args).length > 0
+          ? Buffer.from(JSON.stringify(args)).toString("base64")
+          : "e30=";
+      const result = await nearJsonRpc(url, "query", {
+        request_type: "call_function",
+        finality: "final",
+        account_id: contractId,
+        method_name: methodName,
+        args_base64: argsBase64,
+      });
+      return JSON.parse(Buffer.from(result.result).toString("utf-8"));
+    },
 
-  // Override ALL RPC methods to use globalThis.fetch directly
-  p.sendJsonRpc = (method: string, params: any) =>
-    nearJsonRpc(url, method, params);
-
-  p.callFunction = async (
-    contractId: string,
-    methodName: string,
-    args: any
-  ) => {
-    const result = await nearJsonRpc(url, "query", {
-      request_type: "call_function",
-      finality: "final",
-      account_id: contractId,
-      method_name: methodName,
-      args_base64: args
-        ? Buffer.from(JSON.stringify(args)).toString("base64")
-        : "e30=",
-    });
-    return JSON.parse(Buffer.from(result.result).toString("utf-8"));
+    query: async (params: any) => nearJsonRpc(url, "query", params),
+    sendJsonRpc: (method: string, params: any) =>
+      nearJsonRpc(url, method, params),
+    status: async () => nearJsonRpc(url, "status", []),
   };
-
-  p.query = async (...queryArgs: any[]) =>
-    nearJsonRpc(url, "query", queryArgs[0]);
-
-  p.status = async () => nearJsonRpc(url, "status", []);
-
-  return provider;
 }
 
 /**
- * Create the MPC contract with a native-fetch-compatible provider.
+ * Create a mock FailoverRpcProvider that delegates to our native-fetch provider.
  */
+function createNativeFailoverProvider(url: string) {
+  const inner = createNativeFetchProvider(url);
+
+  // Implements the FailoverRpcProvider interface
+  return {
+    providers: [inner],
+    currentProviderIndex: 0,
+    get currentProvider() {
+      return inner;
+    },
+    switchToNextProvider() {},
+    // withBackoff just calls the inner provider directly
+    async withBackoff(getResult: (provider: any) => Promise<any>) {
+      return getResult(inner);
+    },
+    // Delegate all methods
+    callFunction: inner.callFunction,
+    query: inner.query,
+    sendJsonRpc: inner.sendJsonRpc,
+    status: inner.status,
+  };
+}
+
 function createMPCContract() {
   const contract = new contracts.ChainSignatureContract({
     networkId: "testnet",
     contractId: MPC_CONTRACT_ID,
   });
 
-  // Inject our native-fetch provider into the contract
-  const nativeProvider = createNativeFetchProvider(NEAR_RPC_URL);
-  const failoverProvider = new FailoverRpcProvider(
-    [nativeProvider] as any
-  );
-  (contract as any).provider = failoverProvider;
+  // Replace the entire provider with our native-fetch implementation
+  (contract as any).provider = createNativeFailoverProvider(NEAR_RPC_URL);
 
   return contract;
 }
