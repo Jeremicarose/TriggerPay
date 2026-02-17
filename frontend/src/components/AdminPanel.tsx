@@ -15,7 +15,7 @@ import { runMonitorCycle, getMonitorActivity, getAllTriggers } from "@/lib/near/
 import type { TriggerView } from "@/types/contract";
 import { useQueryClient } from "@tanstack/react-query";
 
-const AGENT_URL = process.env.NEXT_PUBLIC_AGENT_URL || "http://localhost:3001";
+const AGENT_BASE = "/api/agent";
 
 interface ActivityEntry {
   timestamp: string;
@@ -55,7 +55,7 @@ export function AdminPanel() {
 
     // Fetch agent's ETH account
     try {
-      const res = await fetch(`${AGENT_URL}/api/eth-account`);
+      const res = await fetch(`${AGENT_BASE}/eth-account`);
       if (res.ok) setEthAccount(await res.json());
     } catch {}
   }, []);
