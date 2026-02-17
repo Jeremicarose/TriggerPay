@@ -74,6 +74,19 @@ export async function GET(req: NextRequest, ctx: RouteContext) {
     return NextResponse.json({ activity: getActivity() });
   }
 
+  // GET /api/agent/diag — test NEAR RPC connectivity
+  if (route === "diag") {
+    try {
+      const r = await fetch("https://rpc.testnet.near.org/status", {
+        signal: AbortSignal.timeout(5000),
+      });
+      const data = await r.json();
+      return NextResponse.json({ ok: true, version: (data as any).version });
+    } catch (e) {
+      return NextResponse.json({ ok: false, error: String(e) });
+    }
+  }
+
   // GET /api/agent/eth-account
   if (route === "eth-account") {
     return handleEthAccount();
