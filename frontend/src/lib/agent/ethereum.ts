@@ -41,47 +41,54 @@ const MPC_CONTRACT_ID = "v1.signer-prod.testnet";
  * Vercel's serverless runtime where the bundled fetch_json.cjs
  * may not resolve fetch correctly.
  */
+/**
+ * Helper: call NEAR RPC using globalThis.fetch directly.
+ */
+async function nearJsonRpc(url: string, method: string, params: any) {
+  const res = await globalThis.fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method, params }),
+  });
+  if (!res.ok) throw new Error(`RPC ${res.status}: ${url}`);
+  const json = (await res.json()) as any;
+  if (json.error) {
+    const data = json.error?.data;
+    if (data?.error_message) throw new Error(data.error_message);
+    throw new Error(json.error.message || JSON.stringify(json.error));
+  }
+  return json.result;
+}
+
 function createNativeFetchProvider(url: string): JsonRpcProvider {
   const provider = new JsonRpcProvider({ url });
+  const p = provider as any;
 
-  // Override sendJsonRpc to use global fetch() directly
-  (provider as any).sendJsonRpc = async function (
-    method: string,
-    params: any
-  ) {
-    const body = JSON.stringify({
-      jsonrpc: "2.0",
-      id: Date.now(),
-      method,
-      params,
+  // Override ALL RPC methods to use globalThis.fetch directly
+  p.sendJsonRpc = (method: string, params: any) =>
+    nearJsonRpc(url, method, params);
+
+  p.callFunction = async (
+    contractId: string,
+    methodName: string,
+    args: any
+  ) => {
+    const result = await nearJsonRpc(url, "query", {
+      request_type: "call_function",
+      finality: "final",
+      account_id: contractId,
+      method_name: methodName,
+      args_base64: args
+        ? Buffer.from(JSON.stringify(args)).toString("base64")
+        : "e30=",
     });
-
-    const res = await globalThis.fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body,
-    });
-
-    if (!res.ok) {
-      throw new Error(`RPC ${res.status}: ${url}`);
-    }
-
-    const json = (await res.json()) as any;
-
-    if (json.error) {
-      const data = json.error.data;
-      if (data && typeof data === "object" && data.error_message) {
-        throw new Error(data.error_message);
-      }
-      throw new Error(
-        typeof json.error === "string"
-          ? json.error
-          : json.error.message || JSON.stringify(json.error)
-      );
-    }
-
-    return json.result;
+    return JSON.parse(Buffer.from(result.result).toString("utf-8"));
   };
+
+  p.query = async (...queryArgs: any[]) =>
+    nearJsonRpc(url, "query", queryArgs[0]);
+
+  p.status = async () => nearJsonRpc(url, "status", []);
 
   return provider;
 }
