@@ -75,14 +75,22 @@ function createNativeFetchProvider(url: string) {
         args && typeof args === "object" && Object.keys(args).length > 0
           ? Buffer.from(JSON.stringify(args)).toString("base64")
           : "e30=";
-      const result = await nearJsonRpc(url, "query", {
+      const rpcResult = await nearJsonRpc(url, "query", {
         request_type: "call_function",
         finality: "final",
         account_id: contractId,
         method_name: methodName,
         args_base64: argsBase64,
       });
-      return JSON.parse(Buffer.from(result.result).toString("utf-8"));
+
+      if (!rpcResult || !rpcResult.result) {
+        const errMsg = rpcResult?.error || "No result field in response";
+        throw new Error(
+          `callFunction(${contractId}, ${methodName}): ${JSON.stringify(errMsg)}`
+        );
+      }
+
+      return JSON.parse(Buffer.from(rpcResult.result).toString("utf-8"));
     },
 
     query: async (params: any) => nearJsonRpc(url, "query", params),
