@@ -71,7 +71,7 @@ export function AdminPanel() {
     setIsCancelling(flightNumber);
     setLastResult(null);
     try {
-      await fetch("/api/admin/set-status", {
+      await fetch(`${AGENT_BASE}/flight/set-status`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ flight_number: flightNumber, status: "cancelled" }),
