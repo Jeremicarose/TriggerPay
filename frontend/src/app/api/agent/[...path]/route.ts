@@ -117,6 +117,11 @@ export async function POST(req: NextRequest, ctx: RouteContext) {
     return handleSetFlightStatus(req);
   }
 
+  // POST /api/agent/cancel-and-monitor — cancel flight + run monitor in ONE request
+  if (route === "cancel-and-monitor") {
+    return handleCancelAndMonitor(req);
+  }
+
   return NextResponse.json({ error: "Not found" }, { status: 404 });
 }
 
@@ -215,6 +220,50 @@ async function handleSetFlightStatus(req: NextRequest) {
     flight_number: flight_number.toUpperCase(),
     status,
     message: `Flight ${flight_number.toUpperCase()} status set to "${status}"`,
+  });
+}
+
+async function handleCancelAndMonitor(req: NextRequest) {
+  let body: { flight_number?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+
+  if (!body.flight_number) {
+    return NextResponse.json({ error: "Missing flight_number" }, { status: 400 });
+  }
+
+  // Step 1: Cancel the flight (same Lambda memory)
+  setFlightStatus(body.flight_number, "cancelled");
+
+  // Step 2: Run monitor (same Lambda — triggers + flight status are in memory)
+  const contractId = process.env.NEXT_PUBLIC_contractId;
+  if (!contractId) {
+    return NextResponse.json({ error: "Contract ID not configured" }, { status: 500 });
+  }
+
+  const triggers = getActiveTriggers();
+  const results = [];
+
+  for (const trigger of triggers) {
+    const result = await processTrigger(trigger, contractId);
+    results.push(result);
+    logActivity({
+      timestamp: new Date().toISOString(),
+      triggerId: result.triggerId,
+      flight: result.flight,
+      status: result.flightStatus,
+      conditionMet: result.conditionMet,
+      txHash: result.txHash,
+    });
+  }
+
+  return NextResponse.json({
+    flight_cancelled: body.flight_number.toUpperCase(),
+    checked: triggers.length,
+    results,
   });
 }
 
